@@ -496,6 +496,11 @@
             <p>Selecciona una categoría para comenzar. Tienes 15 segundos por pregunta.</p>
             
             <div class="categorias">
+                <div class="categoria" data-categoria="mixta">
+                    <div class="icono">🎲</div>
+                    <h3>Preguntas Mixtas</h3>
+                    <p>10 preguntas de todas las categorías</p>
+                </div>
                 <div class="categoria" data-categoria="historia">
                     <div class="icono">📜</div>
                     <h3>Historia</h3>
@@ -600,8 +605,8 @@
     </audio>
 
     <script>
-        // Base de datos de preguntas por categoría CON RESPUESTAS MEZCLADAS
-        const preguntas = {
+        // Base de datos de preguntas por categoría
+        const preguntasBase = {
             historia: [
                 {
                     pregunta: "¿En qué año cayó el Imperio Romano de Occidente?",
@@ -956,6 +961,49 @@
         const correctSound = document.getElementById('correct-sound');
         const wrongSound = document.getElementById('wrong-sound');
 
+        // Función para mezclar opciones aleatoriamente
+        function mezclarOpciones(pregunta) {
+            const opcionesMezcladas = [...pregunta.opciones];
+            const respuestaCorrecta = opcionesMezcladas[pregunta.correcta];
+            
+            // Mezclar las opciones
+            for (let i = opcionesMezcladas.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [opcionesMezcladas[i], opcionesMezcladas[j]] = [opcionesMezcladas[j], opcionesMezcladas[i]];
+            }
+            
+            // Encontrar la nueva posición de la respuesta correcta
+            const nuevaCorrecta = opcionesMezcladas.indexOf(respuestaCorrecta);
+            
+            return {
+                pregunta: pregunta.pregunta,
+                opciones: opcionesMezcladas,
+                correcta: nuevaCorrecta
+            };
+        }
+
+        // Función para crear categoría mixta
+        function crearCategoriaMixta() {
+            const preguntasMixtas = [];
+            const categorias = ['historia', 'ciencia', 'arte', 'geografia', 'matematicas', 'ingles'];
+            
+            // Tomar 2 preguntas de cada categoría (total 12, pero usaremos 10)
+            categorias.forEach(categoria => {
+                const preguntasCategoria = [...preguntasBase[categoria]];
+                mezclarPreguntas(preguntasCategoria);
+                
+                // Tomar 2 preguntas de cada categoría
+                for (let i = 0; i < 2 && preguntasCategoria.length > 0; i++) {
+                    const pregunta = preguntasCategoria.pop();
+                    preguntasMixtas.push(mezclarOpciones(pregunta));
+                }
+            });
+            
+            // Mezclar todas las preguntas y tomar solo 10
+            mezclarPreguntas(preguntasMixtas);
+            return preguntasMixtas.slice(0, 10);
+        }
+
         // Función para reproducir sonido
         function playSound(sound) {
             sound.currentTime = 0;
@@ -1045,14 +1093,19 @@
         // Funciones del juego
         function iniciarJuego() {
             // Reiniciar variables
-            preguntasActuales = [...preguntas[categoriaActual]];
+            if (categoriaActual === 'mixta') {
+                preguntasActuales = crearCategoriaMixta();
+            } else {
+                preguntasActuales = [...preguntasBase[categoriaActual]];
+                // Mezclar las preguntas y las opciones
+                preguntasActuales = preguntasActuales.map(pregunta => mezclarOpciones(pregunta));
+                mezclarPreguntas(preguntasActuales);
+            }
+            
             preguntaActual = 0;
             puntuacion = 0;
             respuestasIncorrectas = [];
             respuestasCorrectas = 0;
-            
-            // Mezclar preguntas
-            mezclarPreguntas(preguntasActuales);
             
             // Actualizar UI
             puntajeElemento.textContent = `Puntos: ${puntuacion}`;
@@ -1084,7 +1137,7 @@
             numeroPregunta.textContent = `${preguntaActual + 1}/${preguntasActuales.length}`;
             
             // Actualizar indicador de categoría
-            categoriaIndicador.textContent = categoriaActual.toUpperCase();
+            categoriaIndicador.textContent = categoriaActual === 'mixta' ? 'MEZCLA' : categoriaActual.toUpperCase();
             
             // Obtener pregunta actual
             const pregunta = preguntasActuales[preguntaActual];
